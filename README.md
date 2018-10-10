@@ -78,7 +78,7 @@ In order to dynamically generate these checkboxes, we need to load up all of the
 # controllers/owners_controller.rb
 get '/owners/new' do
   @pets = Pet.all
-  erb :'/owners/new'
+  erb :'owners/new'
 end
 ```
 
@@ -237,11 +237,10 @@ post '/owners' do
   if !params["pet"]["name"].empty?
     @owner.pets << Pet.create(name: params["pet"]["name"])
   end
-  redirect "owners/#{@owner.id}"
+  @owner.save
+  redirect to "owners/#{@owner.id}"
 end
 ```
-
-**NOTE: When using the shovel operator, ActiveRecord instantly fires update SQL without waiting for the save or update call on the parent object, unless the parent object is a new record.**
 
 Let's sum up before we move on. We:
 
@@ -263,7 +262,6 @@ Let's do it!
 <h1>Update Owner</h1>
 
 <form action="/owners/<%=@owner.id%>" method="POST">
-  <input id="hidden" type="hidden" name="_method" value="patch">  
   <label>Name:</label>
 
   <br></br>
@@ -293,7 +291,7 @@ Let's do it!
 
 The main difference here is that we added the `checked` property to each checkbox with a condition to test whether the given pet is already present in the current owner's collection of pets. We implemented this `if` statement by wrapping the `checked` attribute in ERB tags, allowing us to use Ruby on our view page.
 
-Go ahead and make some changes to your owner using this edit form, then place a `binding.pry` in your `patch '/owners/:id'` action and submit the form. Once you hit your binding, type `params` in the terminal.
+Go ahead and make some changes to your owner using this edit form, then place a `binding.pry` in your `post '/owners/:id'` action and submit the form. Once you hit your binding, type `params` in the terminal.
 
 I filled out my edit form like this:
 
@@ -331,22 +329,15 @@ Now, if we type `@owner.pets`, we'll see that the owner is no longer associated 
 Great! Now, we need to implement logic similar to that in our `post '/owners'` action to handle a user trying to associate a brand new pet to our owner:
 
 ```ruby
-patch '/owners/:id' do
-    ####### bug fix
-    if !params[:owner].keys.include?("pet_ids")
-    params[:owner]["pet_ids"] = []
-    end
-    #######
-
-    @owner.update(params["owner"])
-    if !params["pet"]["name"].empty?
-      @owner.pets << Pet.create(name: params["pet"]["name"])
-    end
-    redirect "owners/#{@owner.id}"
+post '/owners/:id' do
+  @owner = Owner.find(params[:id])
+  @owner.update(params["owner"])
+  if !params["pet"]["name"].empty?
+    @owner.pets << Pet.create(name: params["pet"]["name"])
+  end
+  redirect to "owners/#{@owner.id}"
 end
 ```
-
-**NOTE: The bug fix is required so that it's possible to remove ALL previous pets from owner.**
 
 And that's it!
 
